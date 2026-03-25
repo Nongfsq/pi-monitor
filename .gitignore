@@ -13,6 +13,7 @@ backend/monitor.db
 
 # 日志文件
 *.log
+*.pid
 
 # 系统隐藏文件
 .DS_Store
