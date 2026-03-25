@@ -2,9 +2,12 @@ from app import create_app
 from app.models import db, AppConfig
 from app.monitor import check_website_status
 from apscheduler.schedulers.background import BackgroundScheduler
+from app.display import lcd_controller
+
 import atexit
 
 app = create_app()
+lcd_controller.show_boot()
 
 with app.app_context():
     # 1. 建表

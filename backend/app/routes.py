@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, render_template, current_app
 from .models import db, StatusLog, AppConfig
 from .hardware import hw_controller
+from .display import lcd_controller
 from .monitor import check_website_status
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -113,24 +114,32 @@ def dev_control():
     action = data.get('action')
     
     if action == 'override_toggle':
-        # 切换硬件接管状态
         is_override = 'true' if data.get('state') else 'false'
         cfg_dev = AppConfig.query.filter_by(key='dev_override').first()
+
         if not cfg_dev:
             db.session.add(AppConfig(key='dev_override', value=is_override))
         else:
             cfg_dev.value = is_override
+
         db.session.commit()
+
+        if is_override == 'true':
+            lcd_controller.show_dev_override("Manual mode")
+
         return jsonify({"msg": "Override toggled"})
         
     elif action == 'set_color':
-        # 接收并应用任意颜色
         color_val = data.get('color')
+
         if color_val == 'off':
             hw_controller.set_manual_color('off')
-        elif color_val.startswith('#'):
+            lcd_controller.show_dev_override("LED OFF")
+        elif color_val and color_val.startswith('#'):
             hw_controller.set_hex_color(color_val)
-        return jsonify({"msg": "Color updated instantly"})
+            lcd_controller.show_dev_override(color_val.upper())
+
+        return jsonify({"msg": "Color updated"})
         
     elif action == 'instant_trigger':
         # 瞬间触发一次网络探测 (绕过 10 秒等待)
@@ -150,4 +159,4 @@ def release_override():
     
     # 瞬间触发一次正常探测，让硬件灯和主页立刻恢复真实状态
     check_website_status(current_app._get_current_object())
-    return jsonify({"msg": "Override released and monitoring resumed"})
+    return jsonify({"msg": "Override released"})
