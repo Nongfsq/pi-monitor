@@ -47,9 +47,14 @@ chmod +x manage.sh
 
 2. Run the script:
 ```bash
-./manage.sh
+./manage.sh start
+./manage.sh stop
+./manage.sh restart
+./manage.sh status
+./manage.sh logs
+./manage.sh run
+./manage.sh help
 ```
-> Select option [1] to start the service in the background. You can select [4] to view the real-time console logs.
 
 ## Web Interfaces
 Access the interfaces via a web browser on the same network:
@@ -58,6 +63,7 @@ Access the interfaces via a web browser on the same network:
     - View uptime, latency chart, history, and toggle Maintenance Mode.
 - Dev Console: `http://<PI_IP_ADDRESS>:5000/dev`
     - Override hardware control, set custom LED colors, or force an instant manual ping.
+- Status: You can also check the IP: `./manage.sh status`
 
 ## Hardware Wiring (Pi 5)
 - GND (Longest Pin): Physical Pin 6 (via 220Ω resistor)
