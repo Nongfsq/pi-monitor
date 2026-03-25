@@ -230,7 +230,13 @@
                     return map[category] || 'bg-gray-100 text-gray-800';
                 }
             },
-            mounted() {
+            async mounted() {
+                // 【双保险】：只要进入主页，不管之前系统什么状态，强制释放开发者接管模式！
+                // 确保主引擎绝对处于工作状态
+                try {
+                    await axios.post('/api/dev/release');
+                } catch(e) {}
+
                 this.fetchData();
                 this.pollInterval = setInterval(this.fetchData, 10000);
             },

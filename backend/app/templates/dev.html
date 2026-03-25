@@ -32,7 +32,7 @@
         
         <div class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
             <h1 class="text-2xl font-bold text-white">⚡ Dev Console: Hardware Override</h1>
-            <a href="/" class="text-blue-400 hover:text-blue-300 text-sm">← Dashboard</a>
+            <button @click="goHome" class="text-blue-400 hover:text-blue-300 text-sm font-bold">← Back to Dashboard</button>
         </div>
 
         <!-- Master Switch -->
@@ -90,16 +90,22 @@
     </div>
     {% endraw %}
 
-    <script>
+       <script>
         const { createApp } = Vue
         createApp({
             data() {
                 return {
                     isOverride: false,
-                    isChecking: false,
                     currentColor: '#000000',
                     requestTimeout: null
                 }
+            },
+            mounted() {
+                // 监听浏览器标签页关闭或刷新事件，试图在销毁前释放控制权
+                window.addEventListener('beforeunload', this.releaseOnUnload);
+            },
+            beforeUnmount() {
+                window.removeEventListener('beforeunload', this.releaseOnUnload);
             },
             methods: {
                 async toggleOverride() {
@@ -109,12 +115,7 @@
                 },
                 handleColorInput(event) {
                     const color = event.target.value;
-                    
-                    // 防抖算法 (Debounce)：防止拖拽时每秒发出上百个请求压垮树莓派
-                    // 设置 40ms 延迟，既保证视觉上的瞬间同步，又保护了后端 API
-                    if (this.requestTimeout) {
-                        clearTimeout(this.requestTimeout);
-                    }
+                    if (this.requestTimeout) clearTimeout(this.requestTimeout);
                     this.requestTimeout = setTimeout(() => {
                         axios.post('/api/dev/control', { action: 'set_color', color: color });
                     }, 40); 
@@ -123,13 +124,14 @@
                     this.currentColor = '#000000';
                     await axios.post('/api/dev/control', { action: 'set_color', color: 'off' });
                 },
-                async triggerCheck() {
-                    this.isChecking = true;
-                    let prev = this.isOverride;
-                    if(prev) await axios.post('/api/dev/control', { action: 'override_toggle', state: false });
-                    await axios.post('/api/dev/control', { action: 'instant_trigger' });
-                    if(prev) await axios.post('/api/dev/control', { action: 'override_toggle', state: true });
-                    this.isChecking = false;
+                releaseOnUnload() {
+                    // 使用 sendBeacon 在浏览器关闭/刷新瞬间发送请求
+                    navigator.sendBeacon('/api/dev/release');
+                },
+                async goHome() {
+                    // 优雅返回：先强制释放硬件控制权，触发一次真实探测，再跳转回主页
+                    await axios.post('/api/dev/release');
+                    window.location.href = '/';
                 }
             }
         }).mount('#dev-app')
