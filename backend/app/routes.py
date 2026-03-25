@@ -28,7 +28,6 @@ def manage_config():
         cfg_maint = AppConfig.query.filter_by(key='maintenance_mode').first()
         
         url = cfg_url.value if cfg_url else "https://www.google.com"
-        # 如果数据库里存的是字符串 'true'，则返回布尔值 True
         is_maint = True if (cfg_maint and cfg_maint.value == 'true') else False
         
         return jsonify({
@@ -43,8 +42,7 @@ def manage_config():
         if 'url' in data:
             cfg_url = AppConfig.query.filter_by(key='target_url').first()
             if not cfg_url:
-                cfg_url = AppConfig(key='target_url', value=data['url'])
-                db.session.add(cfg_url)
+                db.session.add(AppConfig(key='target_url', value=data['url']))
             else:
                 cfg_url.value = data['url']
                 
@@ -53,12 +51,16 @@ def manage_config():
             maint_val = 'true' if data['maintenance_mode'] else 'false'
             cfg_maint = AppConfig.query.filter_by(key='maintenance_mode').first()
             if not cfg_maint:
-                cfg_maint = AppConfig(key='maintenance_mode', value=maint_val)
-                db.session.add(cfg_maint)
+                db.session.add(AppConfig(key='maintenance_mode', value=maint_val))
             else:
                 cfg_maint.value = maint_val
                 
         db.session.commit()
+        
+        # 【核心修复 2】：用户修改配置后，瞬间触发一次网络探测！
+        # 这样主页立刻就能看到状态刷新，不需要干等 10 秒
+        check_website_status(current_app._get_current_object())
+        
         return jsonify({"message": "Configuration updated successfully"})
 
 @api_bp.route('/analytics', methods=['GET'])
@@ -137,3 +139,15 @@ def dev_control():
         return jsonify({"msg": "Instant check completed"})
 
     return jsonify({"error": "Unknown action"}), 400
+
+@api_bp.route('/dev/release', methods=['POST'])
+def release_override():
+    """强制释放开发者接管，并瞬间恢复一次正常网络探测"""
+    cfg_dev = AppConfig.query.filter_by(key='dev_override').first()
+    if cfg_dev:
+        cfg_dev.value = 'false'
+    db.session.commit()
+    
+    # 瞬间触发一次正常探测，让硬件灯和主页立刻恢复真实状态
+    check_website_status(current_app._get_current_object())
+    return jsonify({"msg": "Override released and monitoring resumed"})

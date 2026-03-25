@@ -12,8 +12,15 @@ with app.app_context():
     # 2. 写入默认配置
     if not AppConfig.query.filter_by(key='target_url').first():
         db.session.add(AppConfig(key='target_url', value='https://www.google.com'))
-        db.session.commit()
-
+        
+    # 【核心修复】：每次重启服务时，强制释放开发者接管模式，唤醒后台自动探测引擎！
+    dev_cfg = AppConfig.query.filter_by(key='dev_override').first()
+    if dev_cfg:
+        dev_cfg.value = 'false'
+    else:
+        db.session.add(AppConfig(key='dev_override', value='false'))
+        
+    db.session.commit()
 # --- 核心：启动定时任务引擎 ---
 # 创建调度器
 scheduler = BackgroundScheduler(daemon=True)
