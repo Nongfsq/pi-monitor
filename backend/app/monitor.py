@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timedelta
 from .models import db, StatusLog, AppConfig
 from .hardware import hw_controller
+from .display import lcd_controller
 
 def check_website_status(app):
     """这是后台定时运行的引擎核心"""
@@ -24,6 +25,7 @@ def check_website_status(app):
         # --- 维护模式拦截逻辑 ---
         if is_maint:
             hw_controller.set_status("maintenance")
+            lcd_controller.show_status("maintenance")
             log = StatusLog(
                 timestamp=datetime.utcnow(),
                 target_url=target_url,
@@ -60,8 +62,9 @@ def check_website_status(app):
         except requests.exceptions.RequestException as e:
             category = "critical"
 
-        # 2. 指挥硬件
+        # 2. 指挥硬件 并且 更新输出设备
         hw_controller.set_status(category)
+        lcd_controller.show_status(category, latency_ms=latency_ms, status_code=status_code)
 
         # 3. 记录日志并执行垃圾回收 (GC)
         log = StatusLog(
