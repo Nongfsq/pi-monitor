@@ -13,7 +13,7 @@ with app.app_context():
     if not AppConfig.query.filter_by(key='target_url').first():
         db.session.add(AppConfig(key='target_url', value='https://www.google.com'))
         
-    # 【核心修复】：每次重启服务时，强制释放开发者接管模式，唤醒后台自动探测引擎！
+    # 每次重启服务时，强制释放开发者接管模式，唤醒后台自动探测引擎！
     dev_cfg = AppConfig.query.filter_by(key='dev_override').first()
     if dev_cfg:
         dev_cfg.value = 'false'
